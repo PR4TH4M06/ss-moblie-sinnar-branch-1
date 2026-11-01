@@ -425,6 +425,7 @@ nextjs-portal {
   font: 700 12.5px Jost, sans-serif;
   letter-spacing: 0.07em;
   text-transform: uppercase;
+  text-decoration: none;
   cursor: pointer;
   display: flex;
   align-items: center;

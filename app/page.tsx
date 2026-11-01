@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Logo from "@/components/Logo";
+import { copyTextReliable } from "@/lib/open-review";
 import { normalizeCat, normalizeLang, synthesizeSmartReview } from "@/lib/reviews";
 import {
   categories,
@@ -13,8 +14,8 @@ import {
   whatsappUrl,
 } from "@/lib/shop";
 
-const USED_IDS_KEY = `ss-mobile-${shop.area.toLowerCase().replace(/\s+/g, "-")}-used-reviews`;
-const USED_TEXTS_KEY = `ss-mobile-${shop.area.toLowerCase().replace(/\s+/g, "-")}-used-review-texts`;
+const USED_IDS_KEY = `ss-mobile-${shop.area.toLowerCase().replace(/\s+/g, "-")}-b1-used-reviews`;
+const USED_TEXTS_KEY = `ss-mobile-${shop.area.toLowerCase().replace(/\s+/g, "-")}-b1-used-review-texts`;
 
 const copy = {
   en: {
@@ -149,60 +150,13 @@ export default function Page() {
   }
 
   /**
-   * iOS Safari & Android Chrome compatible Copy + Redirect:
-   * - Synchronous copy via textarea + execCommand('copy') runs inside the exact user tap gesture
-   *   so iOS never blocks clipboard or navigation.
-   * - Also fires navigator.clipboard.writeText for modern browsers.
-   * - Navigates to Google Review URL reliably on both iPhone (iOS Safari) and Android.
+   * iOS Safari + Android: copy first, then let the real <a href> navigate
+   * in the same tap. Delayed window.open / location.assign gets blocked on iPhone.
    */
-  function onCopy() {
-    const targetUrl = googleReviewUrl();
-
-    // 1. Synchronous copy inside user tap gesture (works 100% on iOS Safari)
-    let syncCopied = false;
-    try {
-      const ta = document.createElement("textarea");
-      ta.value = review;
-      ta.setAttribute("readonly", "");
-      ta.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none;";
-      document.body.appendChild(ta);
-      ta.focus();
-      ta.select();
-      ta.setSelectionRange(0, review.length);
-      syncCopied = document.execCommand("copy");
-      document.body.removeChild(ta);
-    } catch {
-      /* fallback to clipboard API below */
-    }
-
-    // 2. Also write via async Clipboard API if available
-    if (!syncCopied && navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(review).catch(() => {});
-    }
-
+  function onCopyReview() {
+    copyTextReliable(review);
     setCopied(true);
     setHint(t.hint2);
-
-    // 3. Open Google Review page (iOS Safari blocks delayed window.open(_blank),
-    //    so on iOS/mobile we navigate directly after a brief visual confirmation,
-    //    or open a new tab if allowed by the browser within the tap gesture).
-    const isIOS =
-      typeof navigator !== "undefined" &&
-      (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
-        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
-
-    if (isIOS) {
-      setTimeout(() => {
-        window.location.assign(targetUrl);
-      }, 350);
-    } else {
-      setTimeout(() => {
-        const win = window.open(targetUrl, "_blank", "noopener,noreferrer");
-        if (!win) {
-          window.location.assign(targetUrl);
-        }
-      }, 650);
-    }
   }
 
   const phoneReady = !shop.phoneTel.includes("X");
@@ -274,13 +228,18 @@ export default function Page() {
           </div>
           <div className="div" />
           <div className="btns">
-            <button className={`cta${copied ? " ok" : ""}`} onClick={onCopy}>
+            <a
+              className={`cta${copied ? " ok" : ""}`}
+              href={googleReviewUrl()}
+              rel="noopener noreferrer"
+              onClick={onCopyReview}
+            >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="9" y="9" width="13" height="13" rx="2" />
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
               </svg>
               <span>{copied ? t.done : t.copy}</span>
-            </button>
+            </a>
             <button
               className={`new${spin ? " spin" : ""}`}
               title="New review"
@@ -487,15 +446,17 @@ export default function Page() {
                 <Logo />
                 <div>
                   <h4>SS MOBILE</h4>
-                  <p>{shop.area.toUpperCase()} · NASHIK</p>
+                  <p>{shop.area.toUpperCase()} ({shop.branchLabel.toUpperCase()}) · NASHIK</p>
                 </div>
               </div>
               <p className="footer-desc">
                 Your trusted destination for All-Brand 5G Smartphones, Smart LED TVs, Bluetooth Speakers, 5.1 Home Theaters, Genuine Accessories &amp; Expert Mobile Repair.
               </p>
-              <div className="footer-owner-pill">
-                <span>👤 Owners:</span> <strong>{shop.ownerTitle}</strong>
-              </div>
+              {shop.ownerTitle ? (
+                <div className="footer-owner-pill">
+                  <span>👤 Owners:</span> <strong>{shop.ownerTitle}</strong>
+                </div>
+              ) : null}
             </div>
 
             <div className="footer-col">
@@ -522,6 +483,7 @@ export default function Page() {
                 {shop.secondOwnerInstagram ? (
                   <a href={shop.secondOwnerInstagram} target="_blank" rel="noopener noreferrer">👑 {shop.secondOwnerInstagramLabel}</a>
                 ) : null}
+                <a href={shop.facebook} target="_blank" rel="noopener noreferrer">📘 Facebook Page</a>
                 <a href={mapsDirectionsUrl()} target="_blank" rel="noopener noreferrer">📍 {shop.address}</a>
               </div>
               <div className="footer-hours">🕒 {shop.hours}</div>
@@ -529,7 +491,7 @@ export default function Page() {
           </div>
 
           <div className="footer-bottom">
-            <span>© {new Date().getFullYear()} SS Mobile {shop.area}, Nashik. All Rights Reserved.</span>
+            <span>© {new Date().getFullYear()} SS Mobile {shop.area}. All Rights Reserved.</span>
             <span>Crafted with ❤️ for Happy Customers</span>
           </div>
         </div>

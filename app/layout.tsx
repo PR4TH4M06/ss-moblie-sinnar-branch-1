@@ -3,8 +3,8 @@ import "./globals.css";
 import { shop } from "@/lib/shop";
 
 export const metadata: Metadata = {
-  title: `${shop.name} (${shop.area}) - Official Review & Store Portal`,
-  description: `Share your experience at ${shop.name}, ${shop.area}, Nashik — Smartphones, Smart TVs, Speakers, Home Theater & Service.`,
+  title: `${shop.name} (${shop.area} - ${shop.branchLabel}) - Official Review & Store Portal`,
+  description: `Share your experience at ${shop.name}, ${shop.area} (${shop.branchLabel}) — Smartphones, Smart TVs, Speakers, Home Theater & Service.`,
   referrer: "strict-origin-when-cross-origin",
   robots: {
     index: true,
